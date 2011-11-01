@@ -1,2 +1,10 @@
 Couple of scripts which generate reports out of JIRA worklogs.
 JIRA SOAP API is used to gather data. 
+
+Before using the scripts create ~/.jira file with content like this:
+
+[default]
+username=aklochkov
+password=secret
+uri=https://issues.griddynamics.net/rpc/soap/jirasoapservice-v2?wsdl
+project=XCOM
