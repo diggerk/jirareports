@@ -1,5 +1,5 @@
 Couple of scripts which generate reports out of JIRA worklogs.
-JIRA SOAP API is used to gather data. 
+[JIRA SOAP API](http://docs.atlassian.com/rpc-jira-plugin/latest/com/atlassian/jira/rpc/soap/JiraSoapService.html) is used to gather data. 
 
 Before using the scripts create ~/.jira file with content like this:
 
