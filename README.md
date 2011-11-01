@@ -3,8 +3,8 @@ Couple of scripts which generate reports out of JIRA worklogs.
 
 Before using the scripts create ~/.jira file with content like this:
 
-[default]
-username=aklochkov
-password=secret
-uri=https://issues.yourcompany.net/rpc/soap/jirasoapservice-v2?wsdl
-project=PRJ
+    [default]
+    username=aklochkov
+    password=secret
+    uri=https://issues.yourcompany.net/rpc/soap/jirasoapservice-v2?wsdl
+    project=PRJ
