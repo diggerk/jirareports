@@ -6,5 +6,5 @@ Before using the scripts create ~/.jira file with content like this:
 [default]
 username=aklochkov
 password=secret
-uri=https://issues.griddynamics.net/rpc/soap/jirasoapservice-v2?wsdl
-project=XCOM
+uri=https://issues.yourcompany.net/rpc/soap/jirasoapservice-v2?wsdl
+project=PRJ
