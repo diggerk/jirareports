@@ -1,0 +1,2 @@
+Couple of scripts which generate reports out of JIRA worklogs.
+JIRA SOAP API is used to gather data. 
