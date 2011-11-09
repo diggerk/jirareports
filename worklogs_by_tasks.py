@@ -17,7 +17,12 @@ jira = JiraConnection()
 (auth, soap, project_name) = (jira.auth, jira.soap, jira.project_name)
 
 project = soap.getProjectByKey(auth, project_name)
-issue_types = soap.getIssueTypesForProject(auth, project.id)
+
+issue_types = {}
+for t in soap.getSubTaskIssueTypesForProject(auth, project.id):
+    issue_types[t.id] = t
+for t in soap.getIssueTypesForProject(auth, project.id):
+    issue_types[t.id] = t
 
 version = sys.argv[1]
 
