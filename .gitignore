@@ -1,1 +1,7 @@
 *.pyc
+*.egg-info
+crawler/bin
+crawler/develop-eggs
+crawler/eggs
+crawler/parts
+.installed.cfg
