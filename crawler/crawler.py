@@ -62,23 +62,22 @@ for version in soap.getVersions(auth, project_name) + [None]:
     if versions and not version.name in versions:
         continue
 
-    version_model = session.query(Version).get(version.id if version else 0)
-    if version_model:
-        if version_model.archived and not versions:
-            logger.info("Skipping archived version %s", version.name)
-            continue
-        if version.archived:
-            logger.info("Archiving version %s", version.name)
-            version_model.archived = True
-    else:
-        version_model = Version(id=int(version.id) if version else 0,
-            name=version.name if version else None,
-            release_date=release_date,
-            archived=version.archived if version else False)
-        session.add(version_model)
-        session.flush()
+    if version:
+        version_model = session.query(Version).get(version.id)
+        if version_model:
+            if version_model.archived and not versions:
+                logger.info("Skipping archived version %s", version.name)
+                continue
+            if version.archived:
+                logger.info("Archiving version %s", version.name)
+                version_model.archived = True
+        else:
+            version_model = Version(id=int(version.id), name=version.name,
+                release_date=release_date, archived=version.archived)
+            session.add(version_model)
+            session.flush()
 
-    active_versions.append(version_model)
+        active_versions.append(version_model)
 
     logger.info("Cloning issues for version %s", version.name if version else '-')
 
@@ -104,9 +103,8 @@ for version in soap.getVersions(auth, project_name) + [None]:
         issue_model.assignee=issue.assignee
         issue_model.created_at=datetime(*issue.created)
         issue_model.status = statuses[int(issue.status)]
+        issue_model.fix_version = version_model
 
-        if len(issue.fixVersions) > 0:
-            issue_model.fix_version = version_model
         if issue.duedate:
             issue_model.due_date = datetime(*issue.duedate)
 
@@ -132,10 +130,16 @@ session.commit()
 
 
 for version in active_versions:
-    logger.info("Updating issues hierarchy for version %s", version.name)
+    logger.info("Updating issues hierarchy for version %s", version.name if version else '-')
 
-    for issue in session.query(Issue)\
-        .filter(and_(Issue.subtask == False, Issue.fix_version == version)):
+    if version:
+        issues = session.query(Issue)\
+            .filter(and_(Issue.subtask == False, Issue.fix_version == version))
+    else:
+        issues = session.query(Issue)\
+            .filter(and_(Issue.subtask == False, Issue.fix_version == None))
+
+    for issue in issues:
 
             subtasks = soap.getIssuesFromJqlSearch(auth, 'parent = "%s"' % issue.key, SOAPpy.Types.intType(100))
             for subtask in subtasks:
