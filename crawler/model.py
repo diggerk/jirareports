@@ -21,7 +21,7 @@ Base = declarative_base(cls=Base)
 
 class Version(Base):
     id =  Column(Integer, primary_key=True)
-    name = Column(String(20), nullable=False)
+    name = Column(String(50), nullable=False)
     release_date = Column(Date())
     archived = Column(Boolean, default=False)
 
@@ -44,7 +44,7 @@ class Issue(Base):
     fix_version_id = Column(Integer, ForeignKey('version.id'))
     status_id = Column(Integer, ForeignKey('status.id'), nullable=False)
 
-    parent = relationship("Issue", backref=backref("subtasks", order_by=id, remote_side="Issue.id"))
+    subtasks = relationship("Issue", backref=backref("parent", remote_side=[id]))
     fix_version = relationship("Version", backref=backref("issues", order_by=id))
     status = relationship("Status")
 

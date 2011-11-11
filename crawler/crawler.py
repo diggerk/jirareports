@@ -1,17 +1,24 @@
 #!/usr/bin/env python -W ignore::DeprecationWarning
 
 import sys
+import logging
 from datetime import datetime
 
 import SOAPpy
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 
 from model import Base, Version, Issue, Worklog, Status
 from common import JiraConnection
 
 
-engine = create_engine('mysql://root:@localhost/xcom_jira', echo=True)
+logger = logging.getLogger(__name__)
+logging.root.addHandler(logging.StreamHandler())
+logging.root.setLevel(logging.DEBUG)
+
+
+engine = create_engine('mysql://root:@localhost/xcom_jira', echo=False)
 engine.connect()
 
 Base.metadata.create_all(engine)
@@ -30,24 +37,6 @@ for t in soap.getSubTaskIssueTypesForProject(auth, project.id):
 for t in soap.getIssueTypesForProject(auth, project.id):
     issue_types[t.id] = t
 
-def build_tasks_hierarchy():
-    issues = soap.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
-        SOAPpy.Types.intType(1000))
-    hierarchy = {}
-    for issue in issues:
-        if not issue_types[issue.type].subTask:
-            children = soap.getIssuesFromJqlSearch(auth, 'parent = "%s"' % issue.key, SOAPpy.Types.intType(100))
-            for child in children:
-                hierarchy[child.key] = issue
-                if child.fixVersions[0].name != version:
-                    print "Warning: Sub-task %s (%s) is not assigned to version %s" % (child.key, child.summary, version)
-    return hierarchy
-
-def get_top_level_issue(issue):
-    return issues_hierarchy[issue.key] if issue.key in issues_hierarchy else issue
-
-#issues_hierarchy = build_tasks_hierarchy()
-
 session = Session()
 
 statuses = {}
@@ -56,55 +45,105 @@ for status in soap.getStatuses(auth):
     s = session.merge(s)
     statuses[s.id] = s
 
-for version in soap.getVersions(auth, project_name):
-    release_date = datetime(*version.releaseDate) if version.releaseDate is not None else None
+active_versions = []
 
-    print "Cloning issues for version", version.name
+existing_issues = frozenset(int(e[0]) for e in session.query(Issue.id).all())
 
-    existing_versions = session.query(Version).filter(Version.id == version.id).all()
-    if existing_versions:
-        version_model = existing_versions[0]
-        if version_model.archived:
+versions = None
+if len(sys.argv) > 1:
+    versions = sys.argv[1:]
+
+for version in soap.getVersions(auth, project_name) + [None]:
+    if not version and versions:
+        continue
+
+    release_date = datetime(*version.releaseDate) if version and version.releaseDate is not None else None
+
+    if versions and not version.name in versions:
+        continue
+
+    version_model = session.query(Version).get(version.id if version else 0)
+    if version_model:
+        if version_model.archived and not versions:
+            logger.info("Skipping archived version %s", version.name)
             continue
         if version.archived:
+            logger.info("Archiving version %s", version.name)
             version_model.archived = True
     else:
-        version_model = Version(id=version.id, name=version.name,
-            release_date=release_date, archived=version.archived)
+        version_model = Version(id=int(version.id) if version else 0,
+            name=version.name if version else None,
+            release_date=release_date,
+            archived=version.archived if version else False)
         session.add(version_model)
         session.flush()
 
-    existing_issues = session.query(Issue.id).filter(Issue.fix_version == version_model).all()
+    active_versions.append(version_model)
 
-    issues = soap.getIssuesFromJqlSearch(auth,
-        "project = %s and fixVersion = '%s'" % (project_name, version.name),
-        SOAPpy.Types.intType(1000))
+    logger.info("Cloning issues for version %s", version.name if version else '-')
+
+    if version:
+        issues = soap.getIssuesFromJqlSearch(auth,
+            "project = %s and fixVersion = '%s'" % (project_name, version.name),
+            SOAPpy.Types.intType(1000))
+    else:
+        issues = soap.getIssuesFromJqlSearch(auth,
+            "project = %s and fixVersion is EMPTY" % project_name,
+            SOAPpy.Types.intType(1000))
 
     for issue in issues:
-        #top_level_issue = get_top_level_issue(issue)
+        if int(issue.id) in existing_issues:
+            issue_model = session.query(Issue).get(int(issue.id))
+        else:
+            issue_model = Issue(id=int(issue.id))
 
-        existing_issue = issue.id in existing_issues
-
-        issue_model = Issue(id=issue.id, key=issue.key, type=issue_types[issue.type].name,
-            subtask=issue_types[issue.type].subTask,
-            summary=issue.summary, assignee=issue.assignee,
-            created_at=datetime(*issue.created))
+        issue_model.key=issue.key
+        issue_model.type=issue_types[issue.type].name
+        issue_model.subtask=issue_types[issue.type].subTask
+        issue_model.summary=issue.summary
+        issue_model.assignee=issue.assignee
+        issue_model.created_at=datetime(*issue.created)
         issue_model.status = statuses[int(issue.status)]
+
         if len(issue.fixVersions) > 0:
             issue_model.fix_version = version_model
         if issue.duedate:
             issue_model.due_date = datetime(*issue.duedate)
-        if existing_issue:
-            session.merge(issue_model)
-        else:
-            session.add(issue_model)
+
+        issue_model = session.merge(issue_model)
 
         for worklog in soap.getWorklogs(auth, issue.key):
-            worklog_model = Worklog(id=worklog.id, date=datetime(*worklog.created), author=worklog.author,
-                time_spent=worklog.timeSpentInSeconds, issue=issue_model)
-            if existing_issue:
-                session.merge(worklog_model)
+            if int(issue.id) in existing_issues:
+                worklog_model = session.query(Worklog).get(int(worklog.id))
             else:
-                session.add(worklog_model)
+                worklog_model = None
+
+            if not worklog_model:
+                worklog_model = Worklog(id=int(worklog.id))
+
+            worklog_model.date=datetime(*worklog.created)
+            worklog_model.author=worklog.author
+            worklog_model.time_spent=worklog.timeSpentInSeconds
+            worklog_model.issue=issue_model
+
+            session.merge(worklog_model)
+
+session.commit()
+
+
+for version in active_versions:
+    logger.info("Updating issues hierarchy for version %s", version.name)
+
+    for issue in session.query(Issue)\
+        .filter(and_(Issue.subtask == False, Issue.fix_version == version)):
+
+            subtasks = soap.getIssuesFromJqlSearch(auth, 'parent = "%s"' % issue.key, SOAPpy.Types.intType(100))
+            for subtask in subtasks:
+                try:
+                    subtask_model = session.query(Issue).filter(Issue.key == subtask.key).one()
+                except NoResultFound:
+                    logger.warn("Can't find subtask %s of task %s", subtask.key, issue.key)
+
+                subtask_model.parent = issue
 
 session.commit()
