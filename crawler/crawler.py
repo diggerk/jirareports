@@ -103,7 +103,10 @@ for version in soap.getVersions(auth, project_name) + [None]:
         issue_model.assignee=issue.assignee
         issue_model.created_at=datetime(*issue.created)
         issue_model.status = statuses[int(issue.status)]
-        issue_model.fix_version = version_model
+        if version:
+            issue_model.fix_version = version_model
+        else:
+            issue_model.fix_version = None
 
         if issue.duedate:
             issue_model.due_date = datetime(*issue.duedate)
@@ -129,7 +132,7 @@ for version in soap.getVersions(auth, project_name) + [None]:
 session.commit()
 
 
-for version in active_versions:
+for version in (active_versions if versions else active_versions + [None]):
     logger.info("Updating issues hierarchy for version %s", version.name if version else '-')
 
     if version:
