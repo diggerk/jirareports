@@ -8,7 +8,7 @@ import sys
 
 import SOAPpy
 
-from common import JiraConnection, datetime
+from common import JiraConnection
 import datetime as datetime_m
 
 def usage():
@@ -19,7 +19,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 jira = JiraConnection()
-(auth, soap, project_name) = (jira.auth, jira.soap, jira.project_name)
+(auth, soap, project_name, to_datetime) = (jira.auth, jira.client, jira.project_name, jira.to_datetime)
 version = sys.argv[1]
 
 if len(sys.argv) > 2:
@@ -29,7 +29,7 @@ else:
     release_date = None
     for v in versions:
         if v.name == version:
-            release_date = datetime(*v.releaseDate)
+            release_date = jira.to_datetime(*v.releaseDate)
             break
     if not release_date:
         print "Can not find version", version
@@ -48,7 +48,7 @@ for issue in issues:
     for l in worklogs:
         if l.author not in stats:
             stats[l.author] = 0
-        wl_time = datetime(*l.created)
+        wl_time = jira.to_datetime(*l.created)
         if wl_time > release_date:
             print "Issue: ", issue
             print "Worklog: ", l

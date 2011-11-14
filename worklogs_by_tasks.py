@@ -15,7 +15,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 jira = JiraConnection()
-(auth, soap, project_name) = (jira.auth, jira.soap, jira.project_name)
+(auth, soap, project_name) = (jira.auth, jira.client, jira.project_name)
 
 project = soap.getProjectByKey(auth, project_name)
 
