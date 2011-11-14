@@ -1,4 +1,5 @@
-#!/usr/bin/env python -W ignore::DeprecationWarning
+#!/usr/bin/env python
+# -W ignore::DeprecationWarning
 # Suppress all deprecation warnings (not recommended for development)
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
