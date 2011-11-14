@@ -5,9 +5,8 @@ import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 
 import sys
-import SOAPpy
 
-from common import JiraConnection, datetime
+from common import JiraConnection
 import datetime as Datetime
 
 def usage():
@@ -18,17 +17,18 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 jira = JiraConnection()
-(auth, soap, project_name) = (jira.auth, jira.soap, jira.project_name)
+auth, client, project_name, to_datetime = (jira.auth, jira.client, jira.project_name, jira.to_datetime)
+
 version = sys.argv[1]
 
 if len(sys.argv) > 2:
     release_date = Datetime.datetime.strptime(sys.argv[2], '%Y-%m-%d')
 else:
-    versions = soap.getVersions(auth, project_name)
+    versions = client.service.getVersions(auth, jira.project_name)
     release_date = None
     for v in versions:
         if v.name == version:
-            release_date = datetime(*v.releaseDate)
+            release_date = to_datetime(v.releaseDate)
             break
     if not release_date:
         print "Can not find version", version
@@ -36,16 +36,16 @@ else:
 
 print "Logs for version %s, after %s" % (version, release_date)
 
-issues = soap.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
-    SOAPpy.Types.intType(1000))
+issues = jira.client.service.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (jira.project_name, version),
+                                                    1000)
 
 stats = {} # user -> [date, issue, time]
 for issue in issues:
-    worklogs = soap.getWorklogs(auth, issue.key)
+    worklogs = client.service.getWorklogs(auth, issue.key)
     for l in worklogs:
         if l.author not in stats:
             stats[l.author] = []
-        wl_time = datetime(*l.created)
+        wl_time = to_datetime(l.created)
         if not release_date or wl_time >= release_date:
 #            print "Issue: ", issue.key
 #            print "Worklog: ", l
@@ -57,5 +57,6 @@ print "Work logged by engineer\ndev\t\tstarted\t\tissue\t\thours"
 
 for author in stats:
     print author
+    stats[author].sort()
     for entry in stats[author]:
         print "\t\t%s\t\t%s\t\t%s" % entry
