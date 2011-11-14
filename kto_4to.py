@@ -5,11 +5,10 @@ import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 
 import sys
-
 import SOAPpy
 
 from common import JiraConnection, datetime
-import datetime as datetime_m
+import datetime as Datetime
 
 def usage():
     print >> sys.stderr, "%s version [date]" % __file__
@@ -23,7 +22,7 @@ jira = JiraConnection()
 version = sys.argv[1]
 
 if len(sys.argv) > 2:
-    release_date = datetime_m.datetime.strptime(sys.argv[2], '%Y-%m-%d')
+    release_date = Datetime.datetime.strptime(sys.argv[2], '%Y-%m-%d')
 else:
     versions = soap.getVersions(auth, project_name)
     release_date = None
@@ -35,27 +34,28 @@ else:
         print "Can not find version", version
         exit(1)
 
-print "Release date:", release_date
+print "Logs for version %s, after %s" % (version, release_date)
 
 issues = soap.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
     SOAPpy.Types.intType(1000))
 
-print "Worklogs done after sprint is finished:"
-
-stats = {}
+stats = {} # user -> [date, issue, time]
 for issue in issues:
     worklogs = soap.getWorklogs(auth, issue.key)
     for l in worklogs:
         if l.author not in stats:
-            stats[l.author] = 0
+            stats[l.author] = []
         wl_time = datetime(*l.created)
-        if wl_time > release_date:
-            print "Issue: ", issue
-            print "Worklog: ", l
-        if wl_time <= release_date or len(sys.argv) < 3:
-            stats[l.author] += l.timeSpentInSeconds
+        if not release_date or wl_time >= release_date:
+#            print "Issue: ", issue.key
+#            print "Worklog: ", l
+        #if wl_time <= release_date or len(sys.argv) < 3:
+        #    stats[l.author] += l.timeSpentInSeconds
+            stats[l.author].append( (wl_time, issue.key, l.timeSpentInSeconds / 3600.0) )
 
-print "Work logged by engineer"
+print "Work logged by engineer\ndev\t\tstarted\t\tissue\t\thours"
 
-for (author, time) in stats.items():
-    print author, time / 3600.0
+for author in stats:
+    print author
+    for entry in stats[author]:
+        print "\t\t%s\t\t%s\t\t%s" % entry
