@@ -51,7 +51,7 @@ class Issue(Base):
 
 class Worklog(Base):
     id =  Column(Integer, primary_key=True)
-    date = Column(Date(), nullable=False)
+    created_at = Column(DateTime(), nullable=False)
     author = Column(String(20), nullable=False)
     time_spent = Column(Integer, nullable=False)
     issue_id = Column(Integer, ForeignKey('issue.id'), nullable=False)

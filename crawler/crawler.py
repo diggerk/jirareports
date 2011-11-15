@@ -122,7 +122,7 @@ for version in soap.getVersions(auth, project_name) + [None]:
             if not worklog_model:
                 worklog_model = Worklog(id=int(worklog.id))
 
-            worklog_model.date=datetime(*worklog.created)
+            worklog_model.created_at=datetime(*worklog.created)
             worklog_model.author=worklog.author
             worklog_model.time_spent=worklog.timeSpentInSeconds
             worklog_model.issue=issue_model
