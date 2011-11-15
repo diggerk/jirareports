@@ -6,8 +6,6 @@ warnings.simplefilter('ignore', DeprecationWarning)
 
 import sys
 
-import SOAPpy
-
 from common import JiraConnection
 
 if len(sys.argv) < 2:
@@ -15,25 +13,25 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 jira = JiraConnection()
-(auth, soap, project_name) = (jira.auth, jira.client, jira.project_name)
+(auth, client, project_name) = (jira.auth, jira.client, jira.project_name)
 
-project = soap.getProjectByKey(auth, project_name)
+project = client.getProjectByKey(auth, project_name)
 
 issue_types = {}
-for t in soap.getSubTaskIssueTypesForProject(auth, project.id):
+for t in client.getSubTaskIssueTypesForProject(auth, project.id):
     issue_types[t.id] = t
-for t in soap.getIssueTypesForProject(auth, project.id):
+for t in client.getIssueTypesForProject(auth, project.id):
     issue_types[t.id] = t
 
 version = sys.argv[1]
 
 def build_tasks_hierarchy():
-    issues = soap.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
-        SOAPpy.Types.intType(1000))
+    issues = client.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
+        jira.int_arg(1000))
     hierarchy = {}
     for issue in issues:
         if not issue_types[issue.type].subTask:
-            children = soap.getIssuesFromJqlSearch(auth, 'parent = "%s"' % issue.key, SOAPpy.Types.intType(100))
+            children = client.getIssuesFromJqlSearch(auth, 'parent = "%s"' % issue.key, jira.int_arg(100))
             for child in children:
                 hierarchy[child.key] = issue
                 if child.fixVersions[0].name != version:
@@ -54,8 +52,8 @@ class IssueStat(object):
 
 
 issues_hierarchy = build_tasks_hierarchy()
-issues = soap.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
-    SOAPpy.Types.intType(1000))
+issues = client.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
+    jira.int_arg(1000))
 
 stats = {}
 for issue in issues:
@@ -67,7 +65,7 @@ for issue in issues:
     else:
         s = stats[top_level_issue.key]
 
-    worklogs = soap.getWorklogs(auth, issue.key)
+    worklogs = client.getWorklogs(auth, issue.key)
     for l in worklogs:
         s.log_work(l)
 

@@ -21,14 +21,20 @@ class SudsJiraConnection(BaseJiraConnection):
     def to_datetime(self, date):
         return date
 
+    def help(self):
+        print self.client
+
+    def int_arg(self, arg):
+        return arg
+
 
 class SoapPyJiraConnection(BaseJiraConnection):
     def __init__(self):
         super(SoapPyJiraConnection, self).__init__()
 
         import SOAPpy
-        self.soap = SOAPpy.WSDL.Proxy(self.jira_url)
-        self.auth = self.soap.login(self._jira_user, self._jira_pass)
+        self.client = SOAPpy.WSDL.Proxy(self.jira_url)
+        self.auth = self.client.login(self._jira_user, self._jira_pass)
 
     from datetime import datetime as Datetime
     def to_datetime(self, jira_date):
@@ -42,6 +48,17 @@ class SoapPyJiraConnection(BaseJiraConnection):
             date[6] = int((f - date[5]) * 1000)
         return Datetime(*date)
 
+    def help(self):
+        for key in self.client.methods.keys():
+            print key, ': '
+            for param in self.client.methods[key].inparams:
+                print '\t', param.name.ljust(10), param.type
+            for param in self.client.methods[key].outparams:
+                print '\tOut: ', param.name.ljust(10), param.type
+
+    def int_arg(self, arg):
+        return SOAPpy.Types.intType(arg)
+
 def JiraConnection(provider='SUDS'):
     if provider == 'SUDS':
         # Suds version
@@ -49,3 +66,4 @@ def JiraConnection(provider='SUDS'):
     else:
         #SOAPpy version
         return SoapPyJiraConnection()
+

@@ -6,8 +6,6 @@ warnings.simplefilter('ignore', DeprecationWarning)
 
 import sys
 
-import SOAPpy
-
 from common import JiraConnection
 import datetime as datetime_m
 
@@ -19,13 +17,13 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 jira = JiraConnection()
-(auth, soap, project_name, to_datetime) = (jira.auth, jira.client, jira.project_name, jira.to_datetime)
+(auth, client, project_name, to_datetime) = (jira.auth, jira.client, jira.project_name, jira.to_datetime)
 version = sys.argv[1]
 
 if len(sys.argv) > 2:
     release_date = datetime_m.datetime.strptime(sys.argv[2], '%Y-%m-%d')
 else:
-    versions = soap.getVersions(auth, project_name)
+    versions = client.getVersions(auth, project_name)
     release_date = None
     for v in versions:
         if v.name == version:
@@ -37,14 +35,14 @@ else:
 
 print "Release date:", release_date
 
-issues = soap.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
-    SOAPpy.Types.intType(1000))
+issues = client.getIssuesFromJqlSearch(auth, 'project = %s and fixVersion = %s' % (project_name, version),
+    jira.int_arg(1000))
 
 print "Worklogs done after sprint is finished:"
 
 stats = {}
 for issue in issues:
-    worklogs = soap.getWorklogs(auth, issue.key)
+    worklogs = client.getWorklogs(auth, issue.key)
     for l in worklogs:
         if l.author not in stats:
             stats[l.author] = 0
