@@ -6,7 +6,7 @@ warnings.simplefilter('ignore', DeprecationWarning)
 
 import sys
 
-from common import JiraConnection
+from jirareports.common import JiraConnection
 import datetime as Datetime
 
 def usage():

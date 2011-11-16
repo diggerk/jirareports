@@ -6,7 +6,7 @@ warnings.simplefilter('ignore', DeprecationWarning)
 
 import sys
 
-from common import JiraConnection
+from jirareports.common import JiraConnection
 
 if len(sys.argv) < 2:
     print "Provide version name"
