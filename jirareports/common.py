@@ -17,6 +17,7 @@ class SudsJiraConnection(BaseJiraConnection):
         from suds.client import Client
         self.client = Client(self.jira_url)
         self.auth = self.client.service.login(self._jira_user, self._jira_pass)
+        self.service = self.client.service
 
     def to_datetime(self, date):
         return date
@@ -33,11 +34,11 @@ class SoapPyJiraConnection(BaseJiraConnection):
         super(SoapPyJiraConnection, self).__init__()
 
         import SOAPpy
-        self.client = SOAPpy.WSDL.Proxy(self.jira_url)
-        self.auth = self.client.login(self._jira_user, self._jira_pass)
+        self.service = SOAPpy.WSDL.Proxy(self.jira_url)
+        self.auth = self.service.login(self._jira_user, self._jira_pass)
 
-    from datetime import datetime as Datetime
     def to_datetime(self, jira_date):
+        from datetime import datetime as Datetime
         date = list(jira_date)
         if date[5] is not None and type(date[5]) == float:
             f = float(date[5])
@@ -49,14 +50,15 @@ class SoapPyJiraConnection(BaseJiraConnection):
         return Datetime(*date)
 
     def help(self):
-        for key in self.client.methods.keys():
+        for key in self.service.methods.keys():
             print key, ': '
-            for param in self.client.methods[key].inparams:
+            for param in self.service.methods[key].inparams:
                 print '\t', param.name.ljust(10), param.type
-            for param in self.client.methods[key].outparams:
+            for param in self.service.methods[key].outparams:
                 print '\tOut: ', param.name.ljust(10), param.type
 
     def int_arg(self, arg):
+        import SOAPpy
         return SOAPpy.Types.intType(arg)
 
 def JiraConnection(provider='SUDS'):
