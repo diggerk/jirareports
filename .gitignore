@@ -5,3 +5,5 @@ crawler/develop-eggs
 crawler/eggs
 crawler/parts
 .installed.cfg
+build
+dist
