@@ -5,10 +5,11 @@ class BaseJiraConnection(object):
     def __init__(self):
         config = ConfigParser.SafeConfigParser()
         config.read(os.path.expanduser('~/.jira'))
-        self.jira_url = config.get('default', 'uri')
-        self._jira_user = config.get('default', 'username')
-        self._jira_pass = config.get('default', 'password')
-        self.project_name = config.get('default', 'project')
+        section_name = os.environ['JIRA_PROFILE'] if 'JIRA_PROFILE' in os.environ else 'default'
+        self.jira_url = config.get(section_name, 'uri')
+        self._jira_user = config.get(section_name, 'username')
+        self._jira_pass = config.get(section_name, 'password')
+        self.project_name = config.get(section_name, 'project')
 
 class SudsJiraConnection(BaseJiraConnection):
     def __init__(self):
