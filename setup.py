@@ -13,6 +13,7 @@ setup(
     packages=find_packages(),
     namespace_packages=['jirareports'],
     install_requires=[
-        'SOAPpy'
+        'SOAPpy',
+        'suds'
     ]
 )
