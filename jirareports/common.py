@@ -68,11 +68,11 @@ class SoapPyJiraConnection(BaseJiraConnection):
         import SOAPpy
         return SOAPpy.Types.intType(arg)
 
-def JiraConnection(provider='SUDS'):
+def JiraConnection(provider='SUDS', profile_name=None):
     if provider == 'SUDS':
         # Suds version
-        return SudsJiraConnection()
+        return SudsJiraConnection(profile_name)
     else:
         #SOAPpy version
-        return SoapPyJiraConnection()
+        return SoapPyJiraConnection(profile_name)
 
