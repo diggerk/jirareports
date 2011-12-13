@@ -2,18 +2,24 @@ import os
 import ConfigParser
 
 class BaseJiraConnection(object):
-    def __init__(self):
+    def __init__(self, profile_name=None):
         config = ConfigParser.SafeConfigParser()
         config.read(os.path.expanduser('~/.jira'))
-        section_name = os.environ['JIRA_PROFILE'] if 'JIRA_PROFILE' in os.environ else 'default'
-        self.jira_url = config.get(section_name, 'uri')
-        self._jira_user = config.get(section_name, 'username')
-        self._jira_pass = config.get(section_name, 'password')
-        self.project_name = config.get(section_name, 'project')
+        if not profile_name:
+            profile_name = os.environ['JIRA_PROFILE'] if 'JIRA_PROFILE' in os.environ else 'default'
+        self.jira_url = config.get(profile_name, 'uri')
+
+        self._jira_user = config.get(profile_name, 'username')
+        self._jira_pass = config.get(profile_name, 'password')
+        self.project_name = config.get(profile_name, 'project')
+
+        self.config = {}
+        for (key, value) in config.items(profile_name):
+            self.config[key] = value
 
 class SudsJiraConnection(BaseJiraConnection):
-    def __init__(self):
-        super(SudsJiraConnection, self).__init__()
+    def __init__(self, profile_name=None):
+        super(SudsJiraConnection, self).__init__(profile_name)
 
         from suds.client import Client
         self.client = Client(self.jira_url)
@@ -31,8 +37,8 @@ class SudsJiraConnection(BaseJiraConnection):
 
 
 class SoapPyJiraConnection(BaseJiraConnection):
-    def __init__(self):
-        super(SoapPyJiraConnection, self).__init__()
+    def __init__(self, profile_name=None):
+        super(SoapPyJiraConnection, self).__init__(profile_name)
 
         import SOAPpy
         self.service = SOAPpy.WSDL.Proxy(self.jira_url)
